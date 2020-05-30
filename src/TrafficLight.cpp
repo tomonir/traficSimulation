@@ -12,11 +12,12 @@ T MessageQueue<T>::receive()
     // to wait for and receive new messages and pull them from the queue using move semantics. 
     // The received object should then be returned by the receive function. 
     std::unique_lock<std::mutex> uLock(_mutex);
+    //std::cout << " Size of queue =" << _queue.size()  << std::endl;
     _cond.wait(uLock, [this] { return !_queue.empty(); });
 
     T msg = std::move(_queue.back());
-    _queue.pop_back();
-
+    //_queue.pop_back();
+    //std::cout << " after taking Size of queue =" << _queue.size()  << std::endl;
     return msg; // will not be copied due to return value optimization (RVO) in C++
 }
 
@@ -35,7 +36,13 @@ void MessageQueue<T>::send(T &&msg)
         _cond.notify_one(); // notify client after pushing new Vehicle into vector
 
 }
-
+template <typename T>
+void MessageQueue<T>::pop_back()
+{
+     std::unique_lock<std::mutex> uLock(_mutex);
+    if (!_queue.empty())
+    _queue.pop_back();
+}
 
 /* Implementation of class "TrafficLight" */
 
@@ -104,7 +111,7 @@ void TrafficLight::cycleThroughPhases()
         {
            
             //std::cout << "Color changed" << std::endl;
-            
+            _messages_queue.pop_back();
 
             if ( _currentPhase == TrafficLightPhase::red)
             {

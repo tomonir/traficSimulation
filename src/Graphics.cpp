@@ -4,6 +4,7 @@
 #include <opencv2/highgui.hpp>
 #include "Graphics.h"
 #include "Intersection.h"
+#include <string> 
 
 void Graphics::simulate()
 {
@@ -51,6 +52,7 @@ void Graphics::drawTrafficObjects()
             // set color according to traffic light and draw the intersection as a circle
             cv::Scalar trafficLightColor = intersection->trafficLightIsGreen() == true ? cv::Scalar(0, 255, 0) : cv::Scalar(0, 0, 255);
             cv::circle(_images.at(1), cv::Point2d(posx, posy), 25, trafficLightColor, -1);
+            cv::putText(_images.at(1),std::to_string(it->getID()),cv::Point2d(posx, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),2);
         }
         else if (it->getType() == ObjectType::objectVehicle)
         {
@@ -60,6 +62,7 @@ void Graphics::drawTrafficObjects()
             int r = sqrt(255*255 - g*g - r*r); // ensure that length of color vector is always 255
             cv::Scalar vehicleColor = cv::Scalar(b,g,r);
             cv::circle(_images.at(1), cv::Point2d(posx, posy), 50, vehicleColor, -1);
+            cv::putText(_images.at(1),std::to_string(it->getID()),cv::Point2d(posx, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),2);
         }
     }
 

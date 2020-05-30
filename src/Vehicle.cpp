@@ -76,6 +76,7 @@ void Vehicle::drive()
             // check wether halting position in front of destination has been reached
             if (completion >= 0.9 && !hasEnteredIntersection)
             {
+               
                 // request entry to the current intersection (using async)
                 auto ftrEntryGranted = std::async(&Intersection::addVehicleToQueue, _currDestination, get_shared_this());
 
@@ -84,7 +85,9 @@ void Vehicle::drive()
 
                 // slow down and set intersection flag
                 _speed /= 10.0;
+                
                 hasEnteredIntersection = true;
+                
             }
 
             // check wether intersection has been crossed

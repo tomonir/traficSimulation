@@ -21,6 +21,7 @@ class MessageQueue
 public:
     void send(T &&msg);
      T receive();
+    void pop_back(); 
 private:
     std::mutex _mutex;
     std::condition_variable _cond;
