@@ -6,6 +6,7 @@
 #include "Street.h"
 #include "Intersection.h"
 #include "Graphics.h"
+#include "Cloud.h"
 
 
 // Paris
@@ -51,7 +52,7 @@ void createTrafficObjects_Paris(std::vector<std::shared_ptr<Street>> &streets, s
 }
 
 // NYC
-void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std::vector<std::shared_ptr<Intersection>> &intersections, std::vector<std::shared_ptr<Vehicle>> &vehicles, std::string &filename, int nVehicles)
+void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std::vector<std::shared_ptr<Intersection>> &intersections, std::vector<std::shared_ptr<Vehicle>> &vehicles, std::shared_ptr<Cloud> cloud,std::string &filename, int nVehicles)
 {
     // assign filename of corresponding city map
     filename = "../data/nyc.jpg";
@@ -103,8 +104,11 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     for (size_t nv = 0; nv < nVehicles; nv++)
     {
         vehicles.push_back(std::make_shared<Vehicle>());
+        
         vehicles.at(nv)->setCurrentStreet(streets.at(nv));
         vehicles.at(nv)->setCurrentDestination(intersections.at(nv));
+        vehicles.at(nv)->setCloud(cloud);
+
     }
 }
 
@@ -114,13 +118,16 @@ int main()
     /* PART 1 : Set up traffic objects */
 
     // create and connect intersections and streets
+    std::shared_ptr<Cloud> cloud = std::make_shared<Cloud>();
+
+
     std::vector<std::shared_ptr<Street>> streets;
     std::vector<std::shared_ptr<Intersection>> intersections;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
     std::string backgroundImg;
     int nVehicles = 6;
     //createTrafficObjects_Paris(streets, intersections, vehicles, backgroundImg, nVehicles);
-    createTrafficObjects_NYC(streets, intersections, vehicles, backgroundImg, nVehicles);
+    createTrafficObjects_NYC(streets, intersections, vehicles, cloud, backgroundImg, nVehicles);
     /* PART 2 : simulate traffic objects */
 
     // simulate intersection
@@ -152,4 +159,6 @@ int main()
     graphics->setBgFilename(backgroundImg);
     graphics->setTrafficObjects(trafficObjects);
     graphics->simulate();
+
+    cloud->setTrafficObjects(trafficObjects);
 }
