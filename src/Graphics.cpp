@@ -4,6 +4,7 @@
 #include <opencv2/highgui.hpp>
 #include "Graphics.h"
 #include "Intersection.h"
+#include <math.h>
 #include <string> 
 
 void Graphics::simulate()
@@ -38,6 +39,7 @@ void Graphics::drawTrafficObjects()
     _images.at(1) = _images.at(0).clone();
     _images.at(2) = _images.at(0).clone();
 
+    
     // create overlay from all traffic objects
     for (auto it : _trafficObjects)
     {
@@ -56,13 +58,21 @@ void Graphics::drawTrafficObjects()
         }
         else if (it->getType() == ObjectType::objectVehicle)
         {
+            double end_point_arrow_x = posx+ 50 * std::cos(it->getMovingAngle());
+            double end_point_arrow_y = posy +50 * std::sin(it->getMovingAngle());
+
             cv::RNG rng(it->getID());
             int b = rng.uniform(0, 255);
             int g = rng.uniform(0, 255);
             int r = sqrt(255*255 - g*g - r*r); // ensure that length of color vector is always 255
             cv::Scalar vehicleColor = cv::Scalar(b,g,r);
             cv::circle(_images.at(1), cv::Point2d(posx, posy), 50, vehicleColor, -1);
+            //cv::Rect rect(posx, posy, 10, 20);
+            //cv::rectangle(_images.at(1), rect, vehicleColor);
+            //cv::rectangle(_images.at(1), cv::Point2d(posx, posy), 50, vehicleColor, -1);
             cv::putText(_images.at(1),std::to_string(it->getID()),cv::Point2d(posx, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),2);
+            //std::cout<<"Moving anagle of Vehicle "<<it->getID() << "is "<<it->getMovingAngle()<<std::endl;
+            //cv::arrowedLine(_images.at(1),cv::Point2d(posx, posy),cv::Point2d(end_point_arrow_x, end_point_arrow_y),(255,255,255),3);
         }
     }
 
