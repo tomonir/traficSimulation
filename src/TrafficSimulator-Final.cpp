@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <random>
 
 #include "Vehicle.h"
 #include "Street.h"
@@ -43,9 +44,12 @@ void createTrafficObjects_Paris(std::vector<std::shared_ptr<Street>> &streets, s
     }
 
     // add vehicles to streets
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(1,4);
     for (size_t nv = 0; nv < nVehicles; nv++)
     {
-        vehicles.push_back(std::make_shared<Vehicle>());
+        vehicles.push_back(std::make_shared<Vehicle>(dist6(rng)*100));
         vehicles.at(nv)->setCurrentStreet(streets.at(nv));
         vehicles.at(nv)->setCurrentDestination(intersections.at(8));
     }
@@ -58,7 +62,7 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     filename = "../data/nyc.jpg";
 
     // init traffic objects
-    int nIntersections = 6;
+    int nIntersections = 8;
     for (size_t ni = 0; ni < nIntersections; ni++)
     {
         intersections.push_back(std::make_shared<Intersection>());
@@ -101,12 +105,18 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     streets.at(6)->setOutIntersection(intersections.at(3));
 
     // add vehicles to streets
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(3,5);
+
     for (size_t nv = 0; nv < nVehicles; nv++)
     {
-        vehicles.push_back(std::make_shared<Vehicle>());
+        vehicles.push_back(std::make_shared<Vehicle>(dist6(rng)*100));
         
-        vehicles.at(nv)->setCurrentStreet(streets.at(nv));
-        vehicles.at(nv)->setCurrentDestination(intersections.at(nv));
+        size_t position = nv % nStreets;
+
+        vehicles.at(nv)->setCurrentStreet(streets.at(position));
+        vehicles.at(nv)->setCurrentDestination(intersections.at(position));
         vehicles.at(nv)->setCloud(cloud);
 
     }
@@ -125,7 +135,7 @@ int main()
     std::vector<std::shared_ptr<Intersection>> intersections;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
     std::string backgroundImg;
-    int nVehicles = 6;
+    int nVehicles = 10;
     //createTrafficObjects_Paris(streets, intersections, vehicles, backgroundImg, nVehicles);
     createTrafficObjects_NYC(streets, intersections, vehicles, cloud, backgroundImg, nVehicles);
     /* PART 2 : simulate traffic objects */

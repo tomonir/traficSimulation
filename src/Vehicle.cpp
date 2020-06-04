@@ -5,14 +5,16 @@
 #include "Intersection.h"
 #include "Vehicle.h"
 
+#define DISTANCE_TO_COLLISION 200 
 
-Vehicle::Vehicle()
+Vehicle::Vehicle(const double max_allowed_speed)
 {
     _currStreet = nullptr;
     _cloud = nullptr;
     _posStreet = 0.0;
     _type = ObjectType::objectVehicle;
     _speed = 400; // m/s
+    _max_allowed_speed = max_allowed_speed;
     _currentState = VehicleStates::moving;
 }
 
@@ -59,7 +61,7 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
             this->setPosition(xv, yv);
 
             // check wether halting position in front of destination has been reached
-            if (completion >= 0.9 && !hasEnteredIntersection)
+            if (completion >= 0.85 && !hasEnteredIntersection)
             {
                
                 // request entry to the current intersection (using async)
@@ -67,11 +69,11 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 this->setCurrentState(VehicleStates::waiting);
                 // wait until entry has been granted
                 ftrEntryGranted.get();
-                _currentState = VehicleStates::crossingIntersection;
+                setCurrentState(VehicleStates::crossingIntersection);
                 /*give signal to the vehicles who are wating for the vehicle in question*/
                 _cloud->sendWeakUPMessage(this->getID());
                 // slow down and set intersection flag
-                _speed /= 10.0;
+                _speed = _max_allowed_speed / 10.0;
                 
                 hasEnteredIntersection = true;
                 
@@ -98,7 +100,7 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                     nextStreet = _currStreet;
                 }
 
-                _currentState = VehicleStates::moving;
+               
                 
                 // pick the one intersection at which the vehicle is currently not
                 std::shared_ptr<Intersection> nextIntersection = nextStreet->getInIntersection()->getID() == _currDestination->getID() ? nextStreet->getOutIntersection() : nextStreet->getInIntersection(); 
@@ -111,33 +113,124 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 this->setCurrentStreet(nextStreet);
 
                 // reset speed and intersection flag
-                _speed *= 10.0;
+                _speed = _max_allowed_speed;
                 hasEnteredIntersection = false;
+                setCurrentState(VehicleStates::moving);
+                //_currentState = VehicleStates::moving;
             }    
 }
 void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                                   const bool hasEnteredIntersection,
                                   double completion  )
 {
-    if ((std::abs(this->getMovingAngle()-other_object->getMovingAngle())<10))
+        double vehicle_destination_x;
+        double vehicle_destination_y;
+
+        double other_vehicle_currentPosition_x;
+        double other_vehicle_currentPosition_y;
+
+        double this_vehicle_currentPosition_x;
+        double this_vehicle_currentPosition_y;
+
+        double this_vehicle_distance_to_destination;
+        double other_vehicle_distance_to_destination;
+    
+    
+    if ((!hasEnteredIntersection))
     
     {
         std::shared_ptr<Vehicle> other_vehicle = std::dynamic_pointer_cast<Vehicle>(other_object);
-        if ((other_vehicle->getCurrentState()== VehicleStates::waiting ) && 
-           (this->getCurrentState()!=VehicleStates::waiting) && 
-           (this->getCurrentState()!=VehicleStates::crossingIntersection) && 
-           (this->getCurrenStreet()== other_vehicle->getCurrenStreet())
-           )
-        {
-            std::cout<<">>>>>>>>>>>>>>>>>>>>The vehicle "<<this->getID()<< " is waiting for the vehicle "<<other_vehicle->getID()<<std::endl;  
-           this->setCurrentState(VehicleStates::waiting); 
-           _cloud->sendWaitingForYouMessage(this->getID(),other_vehicle->getID()); 
-           _cloud->waitForWeakupMessage(this->getID());
 
-           //as soon as waiting done it send weakup message
-           _cloud->sendWeakUPMessage(this->getID());
-           this->setCurrentState(VehicleStates::moving);    
-        }
+
+        /*since both vehicle have same destination; any one can be used to calculate the destination position*/
+        other_vehicle->getCurrentDestination()->getPosition(vehicle_destination_x,vehicle_destination_y);
+        other_vehicle->getPosition(other_vehicle_currentPosition_x,other_vehicle_currentPosition_y);
+        this->getPosition(this_vehicle_currentPosition_x,this_vehicle_currentPosition_y);
+
+        this_vehicle_distance_to_destination = _cloud->getDistanceBetweenPoints(this_vehicle_currentPosition_x,
+        this_vehicle_currentPosition_y, vehicle_destination_x,vehicle_destination_y);
+
+        other_vehicle_distance_to_destination = _cloud->getDistanceBetweenPoints(other_vehicle_currentPosition_x,
+        other_vehicle_currentPosition_y, vehicle_destination_x,vehicle_destination_y);
+
+        std::unique_lock<std::mutex> lck(_mtx);
+        //std::cout << ">Vehicle #" << _id << " distance"<<this_vehicle_distance_to_destination<< " and Vehicle#" << other_vehicle->getID()<<" distance "<< other_vehicle_distance_to_destination<<" DISTANCE is "<< _cloud->getDistanceBetweenPoints(this_vehicle_currentPosition_x,this_vehicle_currentPosition_y,other_vehicle_currentPosition_x,other_vehicle_currentPosition_y) << std::endl;
+        lck.unlock();
+
+        if ((this->getCurrenStreet()->getID()== other_vehicle->getCurrenStreet()->getID()) &&
+           ((this->getCurrentState()!= VehicleStates::crossingIntersection) || (other_vehicle->getCurrentState()!= VehicleStates::crossingIntersection)) && 
+           /*((other_vehicle->getCurrentState()== VehicleStates::waiting)) &&*/
+           (other_vehicle_distance_to_destination < this_vehicle_distance_to_destination) 
+          )
+          {
+
+              //based on distance gap reduce speed;
+               double distance_between_vehicles =  _cloud->getDistanceBetweenPoints(this_vehicle_currentPosition_x,
+        this_vehicle_currentPosition_y, other_vehicle_currentPosition_x,other_vehicle_currentPosition_y);
+             
+             std::unique_lock<std::mutex> lck(_mtx);
+             //std::cout << ">>>Vehicle #" << _id << " and Vehicle#" << other_vehicle->getID() <<" DISTANCE is "<< distance_between_vehicles << std::endl;
+             lck.unlock();
+
+                //after threshold ; 
+                //check other vehicle is in wating state; and this vehicle goes to waiting state
+                //if not request for speed; and follow the speed
+                if (distance_between_vehicles > 100)
+                {
+                    _speed = _max_allowed_speed / 10.0;
+
+                    //std::unique_lock<std::mutex> lck(_mtx);
+                    //std::cout << "Vehicle #" << _id << " reduced speed"  << std::endl;
+                    //lck.unlock();
+
+                } else if (other_vehicle->getCurrentState()== VehicleStates::waiting)
+                {
+                    /* go to waiting state , and send signal that it is waiting for weakup message */
+                    this->setCurrentState(VehicleStates::waiting);
+                    _cloud->sendWaitingForYouMessage(this->getID(),other_vehicle->getID());
+
+                    std::unique_lock<std::mutex> lck(_mtx);
+                    std::cout << "Vehicle #" << _id << " Is waiting for Vehicle#" << other_vehicle->getID() << std::endl;
+                    lck.unlock();
+
+                    _cloud->waitForWeakupMessage(this->getID()); 
+
+                    lck.lock();
+                    std::cout << "Vehicle #" << _id << " got weakup signal from Vehicle#" << other_vehicle->getID() << std::endl;
+                    lck.unlock();
+                    //as soon as waiting done it send weakup message
+                    _cloud->sendWeakUPMessage(this->getID());
+                    this->setCurrentState(VehicleStates::moving); 
+                    
+                } else
+                {
+
+                    _speed = other_vehicle->getCurrentSpeed();
+                    /* request for speed */
+                    /*check is there requsted speed aviable and follow it; otherwise request for one*/
+                    double requested_speed = _cloud->getRequestedSpeed(this->getID());
+                    if (requested_speed>0)
+                    {
+                        std::unique_lock<std::mutex> lck(_mtx);
+                        std::cout << "Vehicle #" << _id << " got speed from Vehicle#" << other_vehicle->getID() << std::endl;
+                        lck.unlock();    
+
+                        if (requested_speed>10) requested_speed -= 5; /*will move little bit slow to avoid further request*/
+                       _speed =  requested_speed;   
+                    }/*else
+                    {
+                        std::unique_lock<std::mutex> lck(_mtx);
+                        std::cout << "Vehicle #" << _id << " send speed request to Vehicle#" << other_vehicle->getID() << std::endl;
+                        lck.unlock();    
+
+                        _cloud->sendSpeedRequest(this->getID(),other_vehicle->getID());
+                    }*/
+                    
+                }
+                
+                
+
+          }
         
     }
 }
@@ -168,7 +261,8 @@ void Vehicle::drive()
         
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            
+            //_cloud->sendSpeedIfRequested(this->getID(),_speed);
+            _cloud->printAllMessage();
             // update position with a constant velocity motion model
             _posStreet += _speed * timeSinceLastUpdate / 1000;
 
@@ -178,14 +272,19 @@ void Vehicle::drive()
             processIntersection(hasEnteredIntersection,timeSinceLastUpdate,completion);
 
 
-            double looking_distance = 200;
+            double looking_distance = DISTANCE_TO_COLLISION;
             //std::vector<std::shared_ptr<TrafficObject>> close_objects;
             auto close_objects = _cloud->getCloseObjects(this->getID(),_posX,_posY,looking_distance);
 
+            this->setCloseVehicleId(-1);
             for (auto it : close_objects)
             {
-                if (it->getType() == ObjectType::objectVehicle)
+                if ((it->getType() == ObjectType::objectVehicle) &&
+                   (std::abs(this->getMovingAngle()-it->getMovingAngle()) <10)
+                   )
                 {
+                    
+                    this->setCloseVehicleId(it->getID());
                     processCloseVehicle(it,hasEnteredIntersection,completion);
                     //std::cout<<"Vehicle #" << _id<< " is close to Vehicle"<<std::endl;
                 }

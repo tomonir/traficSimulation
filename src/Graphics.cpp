@@ -4,6 +4,9 @@
 #include <opencv2/highgui.hpp>
 #include "Graphics.h"
 #include "Intersection.h"
+#include "Vehicle.h"
+#include "Street.h"
+
 #include <math.h>
 #include <string> 
 
@@ -60,7 +63,10 @@ void Graphics::drawTrafficObjects()
         {
             double end_point_arrow_x = posx+ 50 * std::cos(it->getMovingAngle());
             double end_point_arrow_y = posy +50 * std::sin(it->getMovingAngle());
+            std::shared_ptr<Vehicle> this_vehicle = std::dynamic_pointer_cast<Vehicle>(it);
+            std::shared_ptr<Street> curr_street = std::dynamic_pointer_cast<Street>(this_vehicle->getCurrenStreet());
 
+            
             cv::RNG rng(it->getID());
             int b = rng.uniform(0, 255);
             int g = rng.uniform(0, 255);
@@ -70,7 +76,11 @@ void Graphics::drawTrafficObjects()
             //cv::Rect rect(posx, posy, 10, 20);
             //cv::rectangle(_images.at(1), rect, vehicleColor);
             //cv::rectangle(_images.at(1), cv::Point2d(posx, posy), 50, vehicleColor, -1);
-            cv::putText(_images.at(1),std::to_string(it->getID()),cv::Point2d(posx, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),2);
+            //std::string txt_to_dispaly = ""+std::to_string(this_vehicle->getID())+ " S= "+ std::to_string(this_vehicle->getCurrentState())+
+            //                             " C_V_ID= "+ std::to_string(this_vehicle->getCloseVehicleId())   ;
+            
+            std::string txt_to_dispaly = std::to_string(this_vehicle->getID())+"-"+std::to_string(this_vehicle->getCloseVehicleId());
+            cv::putText(_images.at(1),txt_to_dispaly,cv::Point2d(posx-50, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),4);
             //std::cout<<"Moving anagle of Vehicle "<<it->getID() << "is "<<it->getMovingAngle()<<std::endl;
             //cv::arrowedLine(_images.at(1),cv::Point2d(posx, posy),cv::Point2d(end_point_arrow_x, end_point_arrow_y),(255,255,255),3);
         }
