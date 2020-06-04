@@ -13,6 +13,7 @@ Vehicle::Vehicle()
     _posStreet = 0.0;
     _type = ObjectType::objectVehicle;
     _speed = 400; // m/s
+    _currentState = VehicleStates::moving;
 }
 
 
@@ -33,13 +34,14 @@ void Vehicle::simulate()
 
 
 void Vehicle::processIntersection(bool &hasEnteredIntersection,
-                                 const long timeSinceLastUpdate )
+                                 const long timeSinceLastUpdate,
+                                 double completion)
 {
             // update position with a constant velocity motion model
-            _posStreet += _speed * timeSinceLastUpdate / 1000;
+            //_posStreet += _speed * timeSinceLastUpdate / 1000;
 
             // compute completion rate of current street
-            double completion = _posStreet / _currStreet->getLength();
+            //double completion = _posStreet / _currStreet->getLength();
 
             // compute current pixel position on street based on driving direction
             std::shared_ptr<Intersection> i1, i2;
@@ -62,10 +64,12 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                
                 // request entry to the current intersection (using async)
                 auto ftrEntryGranted = std::async(&Intersection::addVehicleToQueue, _currDestination, get_shared_this());
-
+                this->setCurrentState(VehicleStates::waiting);
                 // wait until entry has been granted
                 ftrEntryGranted.get();
-
+                _currentState = VehicleStates::crossingIntersection;
+                /*give signal to the vehicles who are wating for the vehicle in question*/
+                _cloud->sendWeakUPMessage(this->getID());
                 // slow down and set intersection flag
                 _speed /= 10.0;
                 
@@ -76,6 +80,7 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
             // check wether intersection has been crossed
             if (completion >= 1.0 && hasEnteredIntersection)
             {
+                
                 // choose next street and destination
                 std::vector<std::shared_ptr<Street>> streetOptions = _currDestination->queryStreets(_currStreet);
                 std::shared_ptr<Street> nextStreet;
@@ -92,6 +97,8 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                     // this street is a dead-end, so drive back the same way
                     nextStreet = _currStreet;
                 }
+
+                _currentState = VehicleStates::moving;
                 
                 // pick the one intersection at which the vehicle is currently not
                 std::shared_ptr<Intersection> nextIntersection = nextStreet->getInIntersection()->getID() == _currDestination->getID() ? nextStreet->getOutIntersection() : nextStreet->getInIntersection(); 
@@ -108,7 +115,32 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 hasEnteredIntersection = false;
             }    
 }
+void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
+                                  const bool hasEnteredIntersection,
+                                  double completion  )
+{
+    if ((std::abs(this->getMovingAngle()-other_object->getMovingAngle())<10))
+    
+    {
+        std::shared_ptr<Vehicle> other_vehicle = std::dynamic_pointer_cast<Vehicle>(other_object);
+        if ((other_vehicle->getCurrentState()== VehicleStates::waiting ) && 
+           (this->getCurrentState()!=VehicleStates::waiting) && 
+           (this->getCurrentState()!=VehicleStates::crossingIntersection) && 
+           (this->getCurrenStreet()== other_vehicle->getCurrenStreet())
+           )
+        {
+            std::cout<<">>>>>>>>>>>>>>>>>>>>The vehicle "<<this->getID()<< " is waiting for the vehicle "<<other_vehicle->getID()<<std::endl;  
+           this->setCurrentState(VehicleStates::waiting); 
+           _cloud->sendWaitingForYouMessage(this->getID(),other_vehicle->getID()); 
+           _cloud->waitForWeakupMessage(this->getID());
 
+           //as soon as waiting done it send weakup message
+           _cloud->sendWeakUPMessage(this->getID());
+           this->setCurrentState(VehicleStates::moving);    
+        }
+        
+    }
+}
 // virtual function which is executed in a thread
 void Vehicle::drive()
 {
@@ -131,22 +163,35 @@ void Vehicle::drive()
 
         // compute time difference to stop watch
         long timeSinceLastUpdate = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - lastUpdate).count();
+        
+
+        
         if (timeSinceLastUpdate >= cycleDuration)
         {
-            double looking_distance = 100;
+            
+            // update position with a constant velocity motion model
+            _posStreet += _speed * timeSinceLastUpdate / 1000;
+
+            // compute completion rate of current street
+            double completion = _posStreet / _currStreet->getLength();
+            
+            processIntersection(hasEnteredIntersection,timeSinceLastUpdate,completion);
+
+
+            double looking_distance = 200;
             //std::vector<std::shared_ptr<TrafficObject>> close_objects;
-            auto close_objects = _cloud->getCloseObjects(_posX,_posY,looking_distance);
+            auto close_objects = _cloud->getCloseObjects(this->getID(),_posX,_posY,looking_distance);
 
             for (auto it : close_objects)
             {
-                if (it->getType() == ObjectType::objectIntersection)
+                if (it->getType() == ObjectType::objectVehicle)
                 {
-                    
+                    processCloseVehicle(it,hasEnteredIntersection,completion);
+                    //std::cout<<"Vehicle #" << _id<< " is close to Vehicle"<<std::endl;
                 }
             }
 
-            processIntersection(hasEnteredIntersection,timeSinceLastUpdate);
-
+            
             
             // reset stop watch for next cycle
             lastUpdate = std::chrono::system_clock::now();

@@ -154,11 +154,12 @@ int main()
         trafficObjects.push_back(trafficObject);
     });
 
+    cloud->setTrafficObjects(trafficObjects);
     // draw all objects in vector
     Graphics *graphics = new Graphics();
     graphics->setBgFilename(backgroundImg);
     graphics->setTrafficObjects(trafficObjects);
     graphics->simulate();
 
-    cloud->setTrafficObjects(trafficObjects);
+    
 }
