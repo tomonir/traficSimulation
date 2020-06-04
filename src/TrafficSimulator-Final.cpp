@@ -135,7 +135,7 @@ int main()
     std::vector<std::shared_ptr<Intersection>> intersections;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
     std::string backgroundImg;
-    int nVehicles = 10;
+    int nVehicles = 8;
     //createTrafficObjects_Paris(streets, intersections, vehicles, backgroundImg, nVehicles);
     createTrafficObjects_NYC(streets, intersections, vehicles, cloud, backgroundImg, nVehicles);
     /* PART 2 : simulate traffic objects */

@@ -73,7 +73,7 @@ std::vector<std::shared_ptr<Street>> Intersection::queryStreets(std::shared_ptr<
 void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
 {
     std::unique_lock<std::mutex> lck(_mtx);
-    std::cout << "Intersection #" << _id << "::addVehicleToQueue: Vehicle id = " << vehicle->getID() << std::endl;
+    //std::cout << "Intersection #" << _id << "::addVehicleToQueue: Vehicle id = " << vehicle->getID() << std::endl;
     lck.unlock();
 
     // add new vehicle to the end of the waiting line
@@ -95,7 +95,8 @@ void Intersection::addVehicleToQueue(std::shared_ptr<Vehicle> vehicle)
         //std::cout << "Intersection #" << _id << " GREEN signal found-> Vehicle =" << vehicle->getID() << std::endl;
     }
 
-    std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
+    //std::unique_lock<std::mutex> lck(_mtx);
+    //std::cout << "Intersection #" << _id << ": Vehicle #" << vehicle->getID() << " is granted entry." << std::endl;
     
     
     lck.unlock();
