@@ -6,7 +6,9 @@
 #include "Vehicle.h"
 #include "Street.h"
 #include "Intersection.h"
+#include "SpeedLimit.h"
 #include "Graphics.h"
+
 #include "Cloud.h"
 
 
@@ -56,7 +58,7 @@ void createTrafficObjects_Paris(std::vector<std::shared_ptr<Street>> &streets, s
 }
 
 // NYC
-void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std::vector<std::shared_ptr<Intersection>> &intersections, std::vector<std::shared_ptr<Vehicle>> &vehicles, std::shared_ptr<Cloud> cloud,std::string &filename, int nVehicles)
+void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std::vector<std::shared_ptr<Intersection>> &intersections, std::vector<std::shared_ptr<Vehicle>> &vehicles, std::vector<std::shared_ptr<SpeedLimit>> &speedLimits ,std::shared_ptr<Cloud> cloud,std::string &filename, int nVehicles)
 {
     // assign filename of corresponding city map
     filename = "../data/nyc.jpg";
@@ -75,6 +77,21 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     intersections.at(3)->setPosition(1000, 1350);
     intersections.at(4)->setPosition(400, 1000);
     intersections.at(5)->setPosition(750, 250);
+
+
+    int nSppedLimits = 2;
+    for (size_t ni = 0; ni < nSppedLimits; ni++)
+    {
+        speedLimits.push_back(std::make_shared<SpeedLimit>());
+    }
+    speedLimits.at(0)->setPosition(2000,809);
+    speedLimits.at(0)->setSpeed(20);
+
+    speedLimits.at(1)->setPosition(518,497);
+    speedLimits.at(1)->setSpeed(10);
+
+
+
 
     // create streets and connect traffic objects
     int nStreets = 7;
@@ -107,7 +124,7 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     // add vehicles to streets
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist6(3,5);
+    std::uniform_int_distribution<std::mt19937::result_type> dist6(4,5);
 
     for (size_t nv = 0; nv < nVehicles; nv++)
     {
@@ -134,10 +151,11 @@ int main()
     std::vector<std::shared_ptr<Street>> streets;
     std::vector<std::shared_ptr<Intersection>> intersections;
     std::vector<std::shared_ptr<Vehicle>> vehicles;
+    std::vector<std::shared_ptr<SpeedLimit>> speedLimits;
     std::string backgroundImg;
     int nVehicles = 8;
     //createTrafficObjects_Paris(streets, intersections, vehicles, backgroundImg, nVehicles);
-    createTrafficObjects_NYC(streets, intersections, vehicles, cloud, backgroundImg, nVehicles);
+    createTrafficObjects_NYC(streets, intersections, vehicles, speedLimits, cloud, backgroundImg, nVehicles);
     /* PART 2 : simulate traffic objects */
 
     // simulate intersection
@@ -161,6 +179,11 @@ int main()
 
     std::for_each(vehicles.begin(), vehicles.end(), [&trafficObjects](std::shared_ptr<Vehicle> &vehicles) {
         std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(vehicles);
+        trafficObjects.push_back(trafficObject);
+    });
+
+        std::for_each(speedLimits.begin(), speedLimits.end(), [&trafficObjects](std::shared_ptr<SpeedLimit> &speedLimits) {
+        std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(speedLimits);
         trafficObjects.push_back(trafficObject);
     });
 

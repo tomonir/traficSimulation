@@ -3,6 +3,7 @@
 #include "Cloud.h"
 #include "Street.h"
 #include "Intersection.h"
+#include "SpeedLimit.h"
 #include "Vehicle.h"
 
 #define DISTANCE_TO_COLLISION 200 
@@ -14,7 +15,8 @@ Vehicle::Vehicle(const double max_allowed_speed)
     _posStreet = 0.0;
     _type = ObjectType::objectVehicle;
     _speed = 400; // m/s
-    _max_allowed_speed = max_allowed_speed;
+    _street_speed_limit = -1;
+    _max_vehicle_capacity_speed = max_allowed_speed;
     _currentState = VehicleStates::moving;
 }
 
@@ -81,8 +83,8 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 /*give signal to the vehicles who are wating for the vehicle in question*/
                 _cloud->sendWeakUPMessage(this->getID());
                 // slow down and set intersection flag
-                _speed = _max_allowed_speed / 10.0;
-                
+                //_speed = _max_vehicle_capacity_speed / 10.0;
+                assignSpeed(_max_vehicle_capacity_speed / 10.0);
                 hasEnteredIntersection = true;
                 
             }
@@ -121,11 +123,48 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 this->setCurrentStreet(nextStreet);
 
                 // reset speed and intersection flag
-                _speed = _max_allowed_speed;
+                _speed = _max_vehicle_capacity_speed;
+                _street_speed_limit = -1;
+                //assignSpeed(_max_vehicle_capacity_speed);
                 hasEnteredIntersection = false;
                 setCurrentState(VehicleStates::moving);
                 //_currentState = VehicleStates::moving;
             }    
+}
+
+void Vehicle::processSpeedLimit(std::shared_ptr<TrafficObject> other_object)
+{
+    double vehicle_destination_x;
+    double vehicle_destination_y;
+
+    double speed_limit_position_x;
+    double speed_limit_position_y;
+
+    double this_vehicle_position_x;
+    double this_vehicle_position_y;
+
+
+    double this_vehicle_distance_to_destination;
+    double speed_limit_distance_to_destination;
+
+    std::shared_ptr<SpeedLimit> speed_limit = std::dynamic_pointer_cast<SpeedLimit>(other_object);
+    this->getCurrentDestination()->getPosition(vehicle_destination_x,vehicle_destination_y);
+    speed_limit->getPosition(speed_limit_position_x,speed_limit_position_y);
+    this->getPosition(this_vehicle_position_x,this_vehicle_position_y);
+
+
+    this_vehicle_distance_to_destination = _cloud->getDistanceBetweenPoints(this_vehicle_position_x,
+        this_vehicle_position_y, vehicle_destination_x,vehicle_destination_y);
+
+    speed_limit_distance_to_destination = _cloud->getDistanceBetweenPoints(speed_limit_position_x,
+        speed_limit_position_y, vehicle_destination_x,vehicle_destination_y);
+
+    if (this_vehicle_distance_to_destination <= speed_limit_distance_to_destination)
+    {
+        _street_speed_limit = speed_limit->getSpeed()*10;
+    }        
+
+
 }
 void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                                   const bool hasEnteredIntersection,
@@ -178,7 +217,8 @@ void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                 //if not request for speed; and follow the speed
                 if (distance_between_vehicles > (100))
                 {
-                    _speed = _max_allowed_speed / 10.0;
+                    //_speed = _max_vehicle_capacity_speed / 10.0;
+                    assignSpeed(_max_vehicle_capacity_speed / 10.0);
 
                 } else if (other_vehicle->getCurrentState()== VehicleStates::waiting)
                 {
@@ -189,6 +229,7 @@ void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                     std::unique_lock<std::mutex> lck(_mtx);
                     std::cout << "Vehicle #" << _id << " Is waiting -> Vehicle#" << other_vehicle->getID() << std::endl;
                     lck.unlock();
+
 
                     _cloud->waitForWeakupMessage(this->getID()); 
 
@@ -202,7 +243,8 @@ void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                 } else
                 {
                     /*just follow the other vehicle*/
-                    _speed = other_vehicle->getCurrentSpeed();   
+                    //_speed = other_vehicle->getCurrentSpeed();
+                    assignSpeed(other_vehicle->getCurrentSpeed());   
                 }
                 
                 
@@ -211,6 +253,39 @@ void Vehicle::processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
         
     }
 }
+
+
+void Vehicle::assignSpeed(double proposed_speed)
+{
+    if ( _street_speed_limit > -1)
+    {
+        if ((proposed_speed <= _street_speed_limit) &&
+            (proposed_speed <= _max_vehicle_capacity_speed)
+        )
+        {
+            _speed = proposed_speed;
+        }else
+        {
+            /*assumed street speed limit alway less than minimul capacity of a vehicle*/
+            _speed = _street_speed_limit;
+        }
+        
+    }else
+    {
+        /* No street speed limit */
+        if (proposed_speed <= _max_vehicle_capacity_speed)
+        {
+            _speed = proposed_speed;
+        }else
+        {
+            /*assumed street speed limit alway less than minimul capacity of a vehicle*/
+            _speed = _max_vehicle_capacity_speed;
+        }
+
+    }
+    
+}
+
 // virtual function which is executed in a thread
 void Vehicle::drive()
 {
@@ -241,7 +316,8 @@ void Vehicle::drive()
             //_cloud->sendSpeedIfRequested(this->getID(),_speed);
             //_cloud->printAllMessage();
             // update position with a constant velocity motion model
-            _posStreet += _speed * timeSinceLastUpdate / 1000;
+            assignSpeed(this->getCurrentSpeed());
+            _posStreet += this->getCurrentSpeed() * timeSinceLastUpdate / 1000;
 
             // compute completion rate of current street
             double completion = _posStreet / _currStreet->getLength();
@@ -263,6 +339,17 @@ void Vehicle::drive()
                     this->setCloseVehicleId(it->getID());
                     processCloseVehicle(it,hasEnteredIntersection,completion);
                 }
+                else if (it->getType() == ObjectType::objectSpeedLimit)                   
+                {
+                    processSpeedLimit(it);
+                }
+                {
+                    /* code */
+                }
+                
+
+
+
             }
 
             

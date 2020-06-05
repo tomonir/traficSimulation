@@ -6,6 +6,7 @@
 #include "Intersection.h"
 #include "Vehicle.h"
 #include "Street.h"
+#include "SpeedLimit.h"
 
 #include <math.h>
 #include <string> 
@@ -81,8 +82,20 @@ void Graphics::drawTrafficObjects()
             
             std::string txt_to_dispaly = std::to_string(this_vehicle->getID())+"-"+std::to_string(this_vehicle->getCloseVehicleId());
             cv::putText(_images.at(1),txt_to_dispaly,cv::Point2d(posx-50, posy),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),4);
+            
+            cv::putText(_images.at(1),std::to_string(this_vehicle->getCurrentSpeed()/10).substr(0,2),cv::Point2d(posx-40, posy+25),cv::FONT_HERSHEY_SIMPLEX,1,(255,255,255),4);
             //std::cout<<"Moving anagle of Vehicle "<<it->getID() << "is "<<it->getMovingAngle()<<std::endl;
             //cv::arrowedLine(_images.at(1),cv::Point2d(posx, posy),cv::Point2d(end_point_arrow_x, end_point_arrow_y),(255,255,255),3);
+        }else if (it->getType() == ObjectType::objectSpeedLimit)
+        {
+            std::shared_ptr<SpeedLimit> this_SpeedLimit = std::dynamic_pointer_cast<SpeedLimit>(it);
+            double speed = this_SpeedLimit->getSpeed();
+            cv::Scalar speedLimitColor = cv::Scalar(0,0,255);
+            cv::Scalar whiteColor = cv::Scalar(0xfffe);
+            cv::circle(_images.at(1), cv::Point2d(posx, posy), 50, speedLimitColor, 20);
+            cv::circle(_images.at(1), cv::Point2d(posx, posy), 40, whiteColor, -1);
+            
+            cv::putText(_images.at(1),std::to_string(speed).substr(0,2),cv::Point2d(posx-40, posy+15),cv::FONT_HERSHEY_SIMPLEX,2,speedLimitColor,8);
         }
     }
 

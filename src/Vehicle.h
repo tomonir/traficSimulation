@@ -44,12 +44,13 @@ public:
 private:
     // typical behaviour methods
     void drive();
+    void assignSpeed(double proposed_speed);
     void processIntersection(bool &hasEnteredIntersection,const long timeSinceLastUpdate,
     double completion);
     void processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                              const bool hasEnteredIntersection,
                              double completion);
-
+    void processSpeedLimit(std::shared_ptr<TrafficObject> other_object);
     void setCloseVehicleId(int id){_close_vehicle_id= id;};                         
 
     std::shared_ptr<Cloud> _cloud; // information source
@@ -58,9 +59,10 @@ private:
     std::shared_ptr<Intersection> _currDestination; // destination to which the vehicle is currently driving
     double _posStreet;                              // position on current street
     double _speed;                                  // ego speed in m/s
-
-    double _max_allowed_speed;
+    double _max_vehicle_capacity_speed;
+    double _street_speed_limit;
     int _close_vehicle_id;
+
 
 };
 
