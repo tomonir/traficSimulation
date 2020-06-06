@@ -34,7 +34,7 @@ double TrafficObject::getMovingAngle()
 {
     double degrees = std::atan2(_posY - _previous_posY, _posX - _previous_posX) * 180 / M_PI;
 
-    
+    /*
     if (degrees > 90)
     {
         degrees = 450 - degrees;
@@ -42,7 +42,7 @@ double TrafficObject::getMovingAngle()
     else
     {
         degrees = 90 - degrees;
-    }
+    }*/
 
     return degrees;
     

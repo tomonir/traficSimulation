@@ -129,11 +129,13 @@ void createTrafficObjects_NYC(std::vector<std::shared_ptr<Street>> &streets, std
     for (size_t nv = 0; nv < nVehicles; nv++)
     {
         vehicles.push_back(std::make_shared<Vehicle>(dist6(rng)*100));
-        
+
         size_t position = nv % nStreets;
 
         vehicles.at(nv)->setCurrentStreet(streets.at(position));
         vehicles.at(nv)->setCurrentDestination(intersections.at(position));
+
+        /*vehicles can talk with cloud*/
         vehicles.at(nv)->setCloud(cloud);
 
     }
@@ -177,13 +179,13 @@ int main()
         trafficObjects.push_back(trafficObject);
     });
 
-    std::for_each(vehicles.begin(), vehicles.end(), [&trafficObjects](std::shared_ptr<Vehicle> &vehicles) {
-        std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(vehicles);
+    std::for_each(vehicles.begin(), vehicles.end(), [&trafficObjects](std::shared_ptr<Vehicle> &vehicle) {
+        std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(vehicle);
         trafficObjects.push_back(trafficObject);
     });
 
-        std::for_each(speedLimits.begin(), speedLimits.end(), [&trafficObjects](std::shared_ptr<SpeedLimit> &speedLimits) {
-        std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(speedLimits);
+    std::for_each(speedLimits.begin(), speedLimits.end(), [&trafficObjects](std::shared_ptr<SpeedLimit> &speedLimit) {
+        std::shared_ptr<TrafficObject> trafficObject = std::dynamic_pointer_cast<TrafficObject>(speedLimit);
         trafficObjects.push_back(trafficObject);
     });
 
