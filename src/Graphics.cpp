@@ -7,17 +7,18 @@
 #include "Vehicle.h"
 #include "Street.h"
 #include "SpeedLimit.h"
+#include "Pedestrian.h"
 
 #include <math.h>
 #include <string> 
 
-#define VEHICLE_WIDTH 60
-#define VEHICLE_LENGTH 100 
+
 
 
 void Graphics::simulate()
 {
     this->loadBackgroundImg();
+    pedestrain_image_sequenece = 0;
     while (true)
     {
         // sleep at every iteration to reduce CPU usage
@@ -39,6 +40,10 @@ void Graphics::loadBackgroundImg()
     _images.push_back(background);         // first element is the original background
     _images.push_back(background.clone()); // second element will be the transparent overlay
     _images.push_back(background.clone()); // third element will be the result image for display
+
+    _imagesPedestrain.push_back(cv::imread("../data/pedastrain1.jpg"));
+    _imagesPedestrain.push_back(cv::imread("../data/pedastrain2.jpg"));
+    _imagesPedestrain.push_back(cv::imread("../data/pedastrain3.jpg"));
 }
 
 
@@ -129,7 +134,20 @@ void Graphics::drawTrafficObjects()
             cv::circle(_images.at(1), cv::Point2d(posx, posy), 40, whiteColor, -1);
             
             cv::putText(_images.at(1),std::to_string(speed).substr(0,2),cv::Point2d(posx-40, posy+15),cv::FONT_HERSHEY_SIMPLEX,2,cv::Scalar(0.0,0.0,0.0),8);
+        }else if (it->getType() == ObjectType::objectPedestrian)
+        {
+            
+            
+            //cv::circle(_images.at(1), cv::Point2d(posx, posy), 50, (255.0,255.0,255.0), -1);
+            pedestrain_image_sequenece = (pedestrain_image_sequenece+1)%3;    
+            _imagesPedestrain.at(pedestrain_image_sequenece).copyTo(_images.at(1)(cv::Rect(posx,posy-100,_imagesPedestrain.at(pedestrain_image_sequenece).cols, _imagesPedestrain.at(pedestrain_image_sequenece).rows)));
+
         }
+
+        cv::line(_images.at(1), cv::Point2d(1152,971), cv::Point2d(1278,1039), cv::Scalar(255.0, 255.0, 255.0), 5);
+        cv::line(_images.at(1), cv::Point2d(1167,959), cv::Point2d(1278,1015), cv::Scalar(255.0, 255.0, 255.0), 5);
+        cv::line(_images.at(1), cv::Point2d(1182,935), cv::Point2d(1293,989), cv::Scalar(255.0, 255.0, 255.0), 5);
+
     }
 
     float opacity = 0.85;

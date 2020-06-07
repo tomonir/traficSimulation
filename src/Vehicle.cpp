@@ -4,6 +4,7 @@
 #include "Street.h"
 #include "Intersection.h"
 #include "SpeedLimit.h"
+#include "Pedestrian.h"
 #include "Vehicle.h"
 
 #define DISTANCE_TO_COLLISION 200 
@@ -18,6 +19,7 @@ Vehicle::Vehicle(const double max_allowed_speed)
     _street_speed_limit = -1;
     _max_vehicle_capacity_speed = max_allowed_speed;
     _currentState = VehicleStates::moving;
+    _previous_pedestrain_distance = std::numeric_limits<double>::max();
 }
 
 
@@ -130,6 +132,80 @@ void Vehicle::processIntersection(bool &hasEnteredIntersection,
                 setCurrentState(VehicleStates::moving);
                 //_currentState = VehicleStates::moving;
             }    
+}
+
+
+void Vehicle::processPedestrain(std::shared_ptr<TrafficObject> other_object)
+{
+    std::shared_ptr<Pedestrian> pedestrain = std::dynamic_pointer_cast<Pedestrian>(other_object);
+    double vehicle_destination_x;
+    double vehicle_destination_y;
+
+    double this_vehicle_position_x;
+    double this_vehicle_position_y;
+
+    double pedestrain_position_x;
+    double pedestrain_position_y;
+
+    TwoDVector transformed_vehicle_destination;
+    TwoDVector transformed_pedestrain_position;
+
+
+
+
+
+
+    this->getCurrentDestination()->getPosition(vehicle_destination_x,vehicle_destination_y);
+    this->getPosition(this_vehicle_position_x,this_vehicle_position_y);
+    pedestrain->getPosition(pedestrain_position_x,pedestrain_position_y);
+
+    transformed_vehicle_destination.x = vehicle_destination_x - this_vehicle_position_x;
+    transformed_vehicle_destination.y = vehicle_destination_y - this_vehicle_position_y;
+
+    transformed_pedestrain_position.x = pedestrain_position_x - this_vehicle_position_x;
+    transformed_pedestrain_position.y = pedestrain_position_y - this_vehicle_position_y;
+
+    TwoDVector vector_at_vehicle_path = _cloud->getProjectionPoint(transformed_vehicle_destination,transformed_pedestrain_position);
+
+    double distance_bt_vehiclePath_Pedestrain = _cloud->getDistanceBetweenPoints(transformed_pedestrain_position.x,transformed_pedestrain_position.y,
+                                                                                vector_at_vehicle_path.x,vector_at_vehicle_path.y);
+
+    /*No back projection*/
+    if (_cloud->getDistanceBetweenPoints(0,0,transformed_vehicle_destination.x,transformed_vehicle_destination.y)>
+       _cloud->getDistanceBetweenPoints(vector_at_vehicle_path.x,vector_at_vehicle_path.y,transformed_vehicle_destination.x,transformed_vehicle_destination.y))
+    {
+                    /*predestrain is aproching*/
+        if (_previous_pedestrain_distance < distance_bt_vehiclePath_Pedestrain)
+        {
+            double collision_distance = _cloud->getDistanceBetweenPoints(0,0,vector_at_vehicle_path.x,vector_at_vehicle_path.y);
+
+            double time_to_collision = (collision_distance*3)/ this->getCurrentSpeed();
+
+            double time_reach_for_collision_by_pedestrain = (distance_bt_vehiclePath_Pedestrain + VEHICLE_WIDTH)/pedestrain->getCurrentSpeed();
+
+            if (time_reach_for_collision_by_pedestrain<4)
+             {
+                this->setCurrentState(VehicleStates::waiting); 
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                this->setCurrentState(VehicleStates::moving);
+                _cloud->sendWeakUPMessage(this->getID()); 
+             }
+
+                //if (time_reach_for_collision_by_pedestrain < time_to_collision )
+            //std::cout<<"time to reach by Vehicle "<< time_to_collision<<std::endl;
+            //std::cout<<"time to reach by Pedest "<< time_reach_for_collision_by_pedestrain<<std::endl;
+         
+
+        }
+
+        _previous_pedestrain_distance = distance_bt_vehiclePath_Pedestrain;
+
+    }    
+
+
+     
+                                                                               
+
 }
 
 void Vehicle::processSpeedLimit(std::shared_ptr<TrafficObject> other_object)
@@ -343,6 +419,10 @@ void Vehicle::drive()
                 {
                     processSpeedLimit(it);
                 }
+                else if  (it->getType() == ObjectType::objectPedestrian)
+                {
+                    processPedestrain(it);
+                }else   
                 {
                     /* code */
                 }

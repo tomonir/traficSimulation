@@ -28,6 +28,8 @@ private:
     std::string _bgFilename;
     std::string _windowName;
     std::vector<cv::Mat> _images;
+    std::vector<cv::Mat> _imagesPedestrain;
+    int pedestrain_image_sequenece;
 };
 
 #endif

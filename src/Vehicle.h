@@ -1,7 +1,12 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+
+
 #include "TrafficObject.h"
+
+#define VEHICLE_WIDTH 60
+#define VEHICLE_LENGTH 100 
 
 // forward declarations to avoid include cycle
 class Street;
@@ -50,6 +55,7 @@ private:
     void processCloseVehicle(std::shared_ptr<TrafficObject> other_object,
                              const bool hasEnteredIntersection,
                              double completion);
+    void processPedestrain(std::shared_ptr<TrafficObject> other_object) ;                        
     void processSpeedLimit(std::shared_ptr<TrafficObject> other_object);
     void setCloseVehicleId(int id){_close_vehicle_id= id;};                         
 
@@ -62,6 +68,8 @@ private:
     double _max_vehicle_capacity_speed;
     double _street_speed_limit;
     int _close_vehicle_id;
+
+    double _previous_pedestrain_distance;
 
 
 };

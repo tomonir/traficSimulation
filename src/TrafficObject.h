@@ -12,6 +12,7 @@ enum ObjectType
     objectIntersection,
     objectStreet,
     objectSpeedLimit,
+    objectPedestrian,
 };
 
 class TrafficObject

@@ -31,12 +31,23 @@ public:
     int getWeakUpMsgIndex(const int recevier_object_id);
     void printCurrentQueue();
 
+
+
+
 private:
     std::mutex _mutex;
     std::condition_variable _cond;
     std::deque<T> _queue;
 };
 
+
+
+class TwoDVector
+{
+public:    
+    double x;
+    double y;
+};
 
 class Cloud
 {
@@ -55,8 +66,16 @@ public:
     double getRequestedSpeed(const int receiver_id);
     // typical behaviour methods
     std::vector<std::shared_ptr<TrafficObject>> getCloseObjects(const int object_id,const double x, const double y, const double distance);
+    
+
+    /*some helper fuction*/
     double getDistanceBetweenPoints(const double aPoint_x,const double aPoint_y,const double bPoint_x,const double bPoint_y);
     void printAllMessage(); 
+    double getDotProduct(const TwoDVector a, const TwoDVector b);
+    double getVectorMagnitude(const TwoDVector a);
+    /*To get projection point of b to a*/
+    TwoDVector getProjectionPoint(const TwoDVector a, const TwoDVector b );
+
 private:
     // typical behaviour methods
     void sendVehicleMessage(VehicleMessage &&msg);

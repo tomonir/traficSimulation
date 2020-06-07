@@ -60,7 +60,8 @@ void VehicleMessageQueue<T>::waitForWeakUPMessage(const int recevier_object_id)
 
     std::unique_lock<std::mutex> uLock(_mutex);
 
-    _cond.wait(uLock, [this,recevier_object_id] { return ((!_queue.empty()) && (getWeakUpMsgIndex(recevier_object_id)>0)); });
+    _cond.wait(uLock, [this,recevier_object_id] { return  (getWeakUpMsgIndex(recevier_object_id)>0); });
+    
     return ;
 }
 
@@ -271,4 +272,28 @@ void Cloud::sendVehicleMessage(VehicleMessage &&msg)
 }
 
 
+
+
+
+
+double Cloud::getDotProduct(const TwoDVector a, const TwoDVector b)
+{
+return (a.x*b.x)+(a.y*b.y);
+}
+double Cloud::getVectorMagnitude(const TwoDVector a)
+{
+return std::sqrt((a.x*a.x)+(a.y*a.y));
+}
+TwoDVector Cloud::getProjectionPoint(const TwoDVector a, const TwoDVector b )
+{
+    TwoDVector return_vector = a;
+    
+    double magnatude_a = getVectorMagnitude(a);
+    double dotProduct_a_b = getDotProduct(a,b);
+
+    return_vector.x *= (dotProduct_a_b/(magnatude_a*magnatude_a));
+    return_vector.y *= (dotProduct_a_b/(magnatude_a*magnatude_a));
+
+    return return_vector;
+}
 
