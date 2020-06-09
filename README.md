@@ -1,10 +1,18 @@
-# CPPND: Program a Concurrent Traffic Simulation
+# CPPND: Extended Concurrent Traffic Simulation
+
+## Currently it has the following features:
+
+1. Vehicle to Vehicle communication.
+2. Collision avoidance between vehicles. 
+3. Collision avoidance between vehicles and Pedestrians.
+4. Follow speed limits.
+5. Custom vehicles with varying speed.
+6. Crossing junctions (As a part of the course exercise.) 
 
 <img src="data/traffic_simulation.gif"/>
 
-This is the project for the fourth course in the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213): Concurrency. 
-
-Throughout the Concurrency course, you have been developing a traffic simulation in which vehicles are moving along streets and are crossing intersections. However, with increasing traffic in the city, traffic lights are needed for road safety. Each intersection will therefore be equipped with a traffic light. In this project, you will build a suitable and thread-safe communication protocol between vehicles and intersections to complete the simulation. Use your knowledge of concurrent programming (such as mutexes, locks and message queues) to implement the traffic lights and integrate them properly in the code base.
+This is the project for the final capstone project of the  course in the [Udacity C++ Nanodegree Program](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213): Concurrency. 
+This is an extended version of concurrent traffic simulation.
 
 ## Dependencies for Running Locally
 * cmake >= 2.8
@@ -27,13 +35,64 @@ Throughout the Concurrency course, you have been developing a traffic simulation
 3. Compile: `cmake .. && make`
 4. Run it: `./traffic_simulation`.
 
-## Project Tasks
+## Project Descriptions
 
-When the project is built initially, all traffic lights will be green. When you are finished with the project, your traffic simulation should run with red lights controlling traffic, just as in the .gif file above. See the classroom instruction and code comments for more details on each of these parts. 
+- **Class Diagram**:
+<img src="data/classdiagarm.jpg"/> 
 
-- **Task FP.1** : Define a class `TrafficLight` which is a child class of `TrafficObject`. The class shall have the public methods `void waitForGreen()` and `void simulate()` as well as `TrafficLightPhase getCurrentPhase()`, where `TrafficLightPhase` is an enum that can be either `red` or `green`. Also, add the private method `void cycleThroughPhases()`. Furthermore, there shall be the private member `_currentPhase` which can take `red` or `green` as its value.
-- **Task FP.2** : Implement the function with an infinite loop that measures the time between two loop cycles and toggles the current phase of the traffic light between red and green and sends an update method to the message queue using move semantics. The cycle duration should be a random value between 4 and 6 seconds. Also, the while-loop should use `std::this_thread::sleep_`for to wait 1ms between two cycles. Finally, the private method `cycleThroughPhases` should be started in a thread when the public method `simulate` is called. To do this, use the thread queue in the base class.
-- **Task FP.3** : Define a class `MessageQueue` which has the public methods send and receive. Send should take an rvalue reference of type TrafficLightPhase whereas receive should return this type. Also, the class should define an `std::dequeue` called `_queue`, which stores objects of type `TrafficLightPhase`. Finally, there should be an `std::condition_variable` as well as an `std::mutex` as private members.
-- **Task FP.4** : Implement the method `Send`, which should use the mechanisms `std::lock_guard<std::mutex>` as well as `_condition.notify_one()` to add a new message to the queue and afterwards send a notification. Also, in class `TrafficLight`, create a private member of type `MessageQueue` for messages of type `TrafficLightPhase` and use it within the infinite loop to push each new `TrafficLightPhase` into it by calling send in conjunction with move semantics.
-- **Task FP.5** : The method receive should use `std::unique_lock<std::mutex>` and `_condition.wait()` to wait for and receive new messages and pull them from the queue using move semantics. The received object should then be returned by the receive function. Then, add the implementation of the method `waitForGreen`, in which an infinite while-loop runs and repeatedly calls the `receive` function on the message queue. Once it receives `TrafficLightPhase::green`, the method returns.
-- **Task FP.6** : In class Intersection, add a private member `_trafficLight` of type `TrafficLight`. In method `Intersection::simulate()`, start the simulation of `_trafficLight`. Then, in method `Intersection::addVehicleToQueue`, use the methods `TrafficLight::getCurrentPhase` and `TrafficLight::waitForGreen` to block the execution until the traffic light turns green.
+- **Main Process Flow**
+<img src="data/classInteractions.jpg"/>
+
+- **Feature : Vehicle to Vehicle communication** :
+The vehicles are able to send messages to a virtual cloud. 
+and the virtual cloud is capable of handling message queue. 
+other vehicles can request for the incoming message to the cloud. 
+along with handling the message queue, it also provides some helper functionality like - 
+send closed traffic objects to a vehicle; if it is requested, 
+and some linear algebra functionalities.   
+   
+The technique of conditional thread waiting has been used to wait
+for other vehicles inside the cloud class.
+
+- **Feature : collision avoidance between Vehicles** :
+The following picture describes a brief overview of collision avoidance between Vehicles:
+<img src="data/processCloseVehicle1.jpg"/>
+
+- **Feature : Collision avoidance between vehicles and Pedestrians.** :
+The vehicles are intelligent enough to allow pedestrian for passing the street; the following 
+picture describes the algorithm briefly.
+<img src="data/processPedestrain.jpg"/>
+
+- **Feature : Follow speed limits..** :
+The vehicles are capable of following the street's speed limit. 
+The below pictures shows the algorithm.
+<img src="data/processSpeedLimit.jpg"/>
+
+- **Feature : Custom vehicles with varying speeds** :
+The vehicles move very randomly on it's own with varying speed. 
+in the intersection, the incoming flow is controlled with round-robin scheduling technique; meaning the vehicle which reaches the intersection first, 
+leaves first. and, if there is a red signal, the vehicle must wait until the signal turns to green again. 
+
+## An explanation of how my submission satisfies the necessary rubric:
+
+The newly introduced class ( cloud , SpeedLimit, Pedestrian) is designed in a OOP way, 
+that meets the following rubric criteria.
+
+-**1**: The project uses Object Oriented Programming techniques.
+
+-**2**: All class data members are explicitly specified as public, protected, or private.
+
+-**3**: Classes abstract implementation details from their interfaces, for example - 
+ Cloud::waitForWeakupMessage(const int receiver_id);
+ Cloud:: sendWeakUPMessage(const int receiver_id); 
+ Cloud::sendWaitingForYouMessage(const int sender_id, const int receiver_id); 
+
+-**4**: Appropriate data and functions are grouped into classes. Member data that is subject to an invariant is hidden from the user. 
+State is accessed via member functions. 
+For example:Cloud:: VehicleMessageQueue<VehicleMessage> _vehicle_messages_queue;  which only was accede by corresponding public function.
+
+-**5**: The project uses multiple threads in the execution. each and every Pedestrians behave as an independent thread.
+
+-**6**: A mutex or lock is used to handle_queue inside the class VehicleMessageQueue. 
+
+-**7**: A condition variable called _cond inside the class VehicleMessageQueue has been used to weak up the thread(Vehicle) waiting for other vehicle.    
